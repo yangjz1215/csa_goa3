@@ -160,10 +160,14 @@ function results = run_comparison_para(varargin)
         spread_values = zeros(n_runs, 1);
         pareto_sizes = zeros(n_runs, 1);
         pareto_fronts_cell = cell(n_runs, 1);
+        runtimes = zeros(n_runs, 1);
+        success_rates = zeros(n_runs, 1);
 
         parfor run = 1:n_runs
             stream = RandStream('mt19937ar', 'Seed', run * 200 + alg_idx * 1000);
             RandStream.setGlobalStream(stream);
+
+            t_start = tic;
 
             best_fit = 0;
             bestUAV = zeros(N_UAV, 2);
@@ -190,6 +194,11 @@ function results = run_comparison_para(varargin)
                     [best_fit, bestUAV, cg_curve, energy_consumption, pareto_archive] = ...
                         GWO_UAV(N_User, User, N_RRH, RRH, RRH_type, N_UAV, UAV_type, Ub, Lb, params, priorities);
             end
+
+            runtimes(run) = toc(t_start);
+
+            [~, ~, ~, s_rate] = calcMEC_Objectives(bestUAV, User, priorities, params);
+            success_rates(run) = s_rate;
 
             if ~isempty(pareto_archive) && length(pareto_archive) > 1
                 arch_util = [pareto_archive.Utility];
@@ -287,12 +296,18 @@ function results = run_comparison_para(varargin)
         results.(alg_name).mean_spread = mean(spread_values);
         results.(alg_name).mean_pareto_size = mean(pareto_sizes);
         results.(alg_name).pareto_fronts = pareto_fronts_cell;
+        results.(alg_name).runtimes = runtimes;
+        results.(alg_name).mean_runtime = mean(runtimes);
+        results.(alg_name).success_rates = success_rates;
+        results.(alg_name).mean_success_rate = mean(success_rates);
 
         fprintf('  >> %s 平均结果:\n', alg_desc);
         fprintf('     Mean Fitness: %.2f +/- %.2f\n', mean(best_fits), std(best_fits));
         fprintf('     Mean Energy: %.2f J\n', mean(energies));
         fprintf('     Mean High-Priority Coverage: %.2f%%\n', mean(cov_high));
         fprintf('     Mean HV: %.4f +/- %.4f\n', mean(hv_values), std(hv_values));
+        fprintf('     Mean Runtime: %.2f s\n', mean(runtimes));
+        fprintf('     Mean Success Rate: %.2f%%\n', mean(success_rates) * 100);
     end
 
     fprintf('\n========== 开始执行全局 Min-Max 归一化与指标修正 ==========\n');

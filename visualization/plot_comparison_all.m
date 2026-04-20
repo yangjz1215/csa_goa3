@@ -263,4 +263,67 @@ end
 saveas(fig4, fullfile(output_dir, 'comparison_projections_2d.png'));
 saveas(fig4, fullfile(output_dir, 'comparison_projections_2d.fig'));
 close(fig4);
+
+fprintf('正在绘制收敛速度与成功率图表...\n');
+
+num_algs = length(algorithms);
+n_runs_actual = length(results.(algorithms{1}).runtimes);
+all_runtimes = zeros(n_runs_actual, num_algs);
+all_success = zeros(n_runs_actual, num_algs);
+
+for a = 1:num_algs
+    alg_name = algorithms{a};
+    if isfield(results.(alg_name), 'runtimes')
+        all_runtimes(:, a) = results.(alg_name).runtimes(:);
+        all_success(:, a) = results.(alg_name).success_rates(:) * 100;
+    else
+        warning('未找到 %s 的 runtime 或 success_rate 数据，请检查 mat 文件。', alg_name);
+    end
+end
+
+fig_runtime = figure('Position', [100, 100, 600, 450]);
+set(gcf, 'Color', 'w');
+hold on; grid on;
+set(gca, 'GridLineStyle', ':', 'GridAlpha', 0.6, 'FontSize', 12, 'LineWidth', 1.2);
+
+total_iterations = 300;
+mean_rt = mean(all_runtimes, 1) / total_iterations;
+std_rt = std(all_runtimes, 0, 1) / total_iterations;
+
+for a = 1:num_algs
+    bar(a, mean_rt(a), 0.6, 'FaceColor', colors(a,:), 'EdgeColor', 'k', 'LineWidth', 1.2, 'FaceAlpha', 0.8);
+end
+errorbar(1:num_algs, mean_rt, std_rt, 'k', 'LineStyle', 'none', 'LineWidth', 1.5, 'CapSize', 10);
+
+set(gca, 'XTick', 1:num_algs, 'XTickLabel', labels);
+ylabel('Average Runtime per Iteration (Seconds)', 'FontWeight', 'bold', 'FontSize', 12);
+title('Algorithm Runtime Comparison', 'FontWeight', 'bold', 'FontSize', 14);
+set(gca, 'FontName', 'Times New Roman', 'FontSize', 11, 'LineWidth', 1.2);
+box on;
+
+exportgraphics(fig_runtime, fullfile(output_dir, 'comparison_runtime_bar.png'), 'Resolution', 300);
+saveas(fig_runtime, fullfile(output_dir, 'comparison_runtime_bar.fig'));
+close(fig_runtime);
+
+fig_success = figure('Position', [150, 150, 600, 450]);
+set(gcf, 'Color', 'w');
+
+b2 = boxplot(all_success, 'Labels', labels, 'Colors', 'k');
+set(b2, 'LineWidth', 1.5);
+h = findobj(gca, 'Tag', 'Box');
+for j = 1:length(h)
+    patch(get(h(j), 'XData'), get(h(j), 'YData'), colors(num_algs-j+1,:), 'FaceAlpha', 0.6);
+end
+
+ylabel('Task Execution Success Rate (%)', 'FontWeight', 'bold', 'FontSize', 12);
+title('Task Success Rate Distribution (30 Independent Runs)', 'FontWeight', 'bold', 'FontSize', 14);
+grid on; set(gca, 'GridLineStyle', ':', 'GridAlpha', 0.6, 'FontSize', 12, 'LineWidth', 1.2);
+set(gca, 'FontName', 'Times New Roman', 'FontSize', 11, 'LineWidth', 1.2);
+box on;
+
+exportgraphics(fig_success, fullfile(output_dir, 'comparison_success_rate_boxplot.png'), 'Resolution', 300);
+saveas(fig_success, fullfile(output_dir, 'comparison_success_rate_boxplot.fig'));
+close(fig_success);
+
+fprintf('Runtime and success rate charts saved to %s\n', output_dir);
 end

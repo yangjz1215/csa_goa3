@@ -1,10 +1,11 @@
-function [utility, latency, energy] = calcMEC_Objectives(UAV_pos, User, priorities, params)
+function [utility, latency, energy, success_rate] = calcMEC_Objectives(UAV_pos, User, priorities, params)
     N_User = size(User, 1);
     N_UAV = size(UAV_pos, 1);
 
     utility = 0;
     latency = 0;
     comp_energy = 0;
+    success_count = 0;
 
     B_available = ones(N_UAV, 1) * params.B_total;
     F_available = ones(N_UAV, 1) * params.F_total;
@@ -38,6 +39,7 @@ function [utility, latency, energy] = calcMEC_Objectives(UAV_pos, User, prioriti
                 F_available(best_uav) = F_available(best_uav) - req_F;
 
                 utility = utility + prio;
+                success_count = success_count + 1;
 
                 t_trans = task_D_user / (req_B * spectral_efficiency);
                 t_comp = task_C_user / req_F;
@@ -72,6 +74,7 @@ function [utility, latency, energy] = calcMEC_Objectives(UAV_pos, User, prioriti
                                     utility = utility + prio;
                                     latency = latency + total_relay_latency;
                                     comp_energy = comp_energy + (params.PtxU * t_trans2);
+                                    success_count = success_count + 1;
                                 end
                             end
                         end
@@ -85,4 +88,5 @@ function [utility, latency, energy] = calcMEC_Objectives(UAV_pos, User, prioriti
     flight_energy = sum(fly_dist * params.k_move);
 
     energy = flight_energy + comp_energy;
+    success_rate = success_count / N_User;
 end
